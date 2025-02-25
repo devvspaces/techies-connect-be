@@ -1,0 +1,166 @@
+enum Tier {
+  tier0
+  tier1
+  tier2
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+}
+
+enum AddressVerificationStatus {
+  VERIFIED
+  PENDING
+  REJECTED
+}
+
+enum IdVerificationStatus {
+  VERIFIED
+  PENDING
+  REJECTED
+}
+
+enum DeviceType {
+  ANDROID
+  IOS
+  WEB
+}
+
+enum LoanType {
+  LIFESTYLE
+  EMPLOYEE_ADVANCE
+  BUY_NOW_PAY_LATER
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LoanRepaymentStatus {
+  PAID
+  OVERDUE
+}
+
+Table User {
+  pk integer [primary key]
+  id uuid [unique]
+  username varchar [unique]
+  email varchar [unique]
+  password varchar [note: 'hashed']
+  phoneNumber varchar [unique]
+  isPhoneVerified boolean
+  isEmailVerified boolean
+  transaction_pin varchar [note: 'hashed']
+  created_at datetime
+  updated_at datetime
+}
+
+Table Profile {
+  pk integer [primary key]
+  id uuid [unique]
+  user_id varchar [unique]
+  image varchar
+  firstName varchar(30)
+  lastName varchar(30)
+  maritalStatus MaritalStatus
+  address varchar
+  liveness_verification_data json
+  nonRegulatoryData map
+  points integer
+  badges varchar [note: 'List of strings']
+}
+
+Table UserAccount {
+  pk integer [primary key]
+  id uuid [unique]
+  user_id uuid
+  account_number varchar
+  tier_level Tier [default: `tier0`]
+}
+
+Table Tier {
+  pk integer [primary key]
+  id uuid [unique]
+  name varchar(100)
+  daily_limit float
+}
+
+Table AccountSetting {
+  pk integer [primary key]
+  id uuid [unique]
+  user_id varchar
+  device_ip varchar
+  device_os varchar
+  device_token varchar
+  device_type DeviceType
+  notification_preferences map
+  two_factor_authentication boolean
+  biometrics_authentication boolean
+}
+
+Table IdentityVerification {
+  pk integer [primary key]
+  id uuid [unique]
+  userId varchar(255)
+  bvn varchar(10)
+  vnin varchar
+  address_verification_status AddressVerificationStatus
+  id_verification_status IdVerificationStatus
+  industry_in_which_worked varchar(255)
+}
+
+Table NextOfKin {
+  pk integer [primary key, increment]
+  id uuid [unique]
+  name varchar(100)
+  email varchar(100)
+  phoneNumber varchar(20)
+  relationship varchar(50)
+}
+
+Table Loan {
+  pk integer [primary key, increment]
+  id uuid [unique]
+  user_id varchar
+  type LoanType
+  amount float
+  interest_rate float
+  status LoanStatus
+  approval_date date
+  repayment_schedule map
+  remaining_balance float
+  employer_verification_status boolean [note: 'for employee advance loan']
+  device_verification_status boolean [note: 'for buy now pay later']
+  street_credibility_score float [note: 'for lifestyle loan']
+  agent_id integer
+}
+
+Table Agent {
+  pk integer [primary key, increment]
+  id uuid [unique]
+  name varchar(100)
+  phone_number varchar [unique]
+  email varchar [unique]
+  street_credibility_score float
+}
+
+Table LoanRepayment {
+  pk integer [primary key, increment]
+  id uuid [unique]
+  loan_id uuid
+  amount_paid float
+  repayment_date datetime
+  status LoanRepaymentStatus
+}
+
+
+Ref: "Profile"."pk" - "User"."pk"
+Ref: "User"."id" - "IdentityVerification"."id"
+Ref: "User"."id" - "AccountSetting"."user_id"
+Ref: "User"."id" < "NextOfKin"."id"
+Ref: "Loan"."agent_id" < "Agent"."id"
+Ref: "Loan"."id" < "LoanRepayment"."loan_id"
+Ref: "User"."id" - "UserAccount"."user_id"

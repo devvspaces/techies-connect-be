@@ -1,0 +1,210 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TierLevel {
+  tier0
+  tier1
+  tier2
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+}
+
+enum AddressVerificationStatus {
+  VERIFIED
+  PENDING
+  REJECTED
+}
+
+enum IdVerificationStatus {
+  VERIFIED
+  PENDING
+  REJECTED
+}
+
+enum DeviceType {
+  ANDROID
+  IOS
+  WEB
+}
+
+enum LoanType {
+  LIFESTYLE
+  EMPLOYEE_ADVANCE
+  BUY_NOW_PAY_LATER
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LoanRepaymentStatus {
+  PAID
+  OVERDUE
+}
+
+model User {
+  id              String                @id @default(cuid())
+  email           String                @unique
+  phoneNumber     String                @unique @map("phone_number")
+  username        String                @unique
+  password        String
+  isPhoneVerified Boolean               @default(false) @map("is_phone_verified")
+  isEmailVerified Boolean               @default(false) @map("is_email_verified")
+  transaction_pin String                @map("transaction_pin")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+  lastLogin       DateTime              @map("last_login")
+  profile         Profile?
+  account         UserAccount?
+  identity        IdentityVerification?
+  accountSetting  AccountSetting?
+  nextOfKins      NextOfKin[]
+  loans           Loan[]
+
+  @@unique([phoneNumber, email])
+  @@map("users")
+}
+
+model AccountSetting {
+  id                       String     @id @default(cuid())
+  user                     User       @relation(fields: [userId], references: [id])
+  userId                   String     @unique @map("user_id")
+  deviceIp                 String     @map("device_ip")
+  deviceOs                 String     @map("device_os")
+  deviceToken              String     @map("device_token")
+  deviceType               DeviceType @map("device_type")
+  notificationPreferences  String     @map("notification_preferences")
+  twoFactorAuthentication  Boolean    @default(false) @map("two_factor_authentication")
+  biometricsAuthentication Boolean    @default(false) @map("biometrics_authentication")
+  createdAt                DateTime   @default(now()) @map("created_at")
+  updatedAt                DateTime   @updatedAt @map("updated_at")
+
+  @@map("account_settings")
+}
+
+model Profile {
+  id                       String        @id @default(cuid())
+  user                     User          @relation(fields: [userId], references: [id])
+  userId                   String        @unique @map("user_id")
+  image                    String
+  firstName                String        @map("first_name")
+  lastName                 String        @map("last_name")
+  maritalStatus            MaritalStatus @map("marital_status")
+  address                  String
+  livenessVerificationData String        @map("liveness_verification_data")
+  nonRegulatoryData        String        @map("non_regulatory_data")
+  points                   Int
+  badges                   String[]
+  createdAt                DateTime      @default(now()) @map("created_at")
+  updatedAt                DateTime      @updatedAt @map("updated_at")
+
+  @@map("profiles")
+}
+
+model Tier {
+  id         String @id @default(cuid())
+  name       String
+  dailyLimit Float  @map("daily_limit")
+}
+
+model UserAccount {
+  id            String    @id @default(cuid())
+  user          User      @relation(fields: [userId], references: [id])
+  userId        String    @unique @map("user_id")
+  accountNumber String    @map("account_number")
+  tier          TierLevel @default(tier0)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+}
+
+model IdentityVerification {
+  id                        String                    @id @default(cuid())
+  user                      User                      @relation(fields: [userId], references: [id])
+  userId                    String                    @unique @map("user_id")
+  bvn                       String
+  vnin                      String
+  addressVerificationStatus AddressVerificationStatus @default(PENDING) @map("address_verification_status")
+  idVerificationStatus      IdVerificationStatus      @default(PENDING) @map("id_verification_status")
+  industryInWhichWorked     String                    @map("industry_in_which_worked")
+  createdAt                 DateTime                  @default(now()) @map("created_at")
+  updatedAt                 DateTime                  @updatedAt @map("updated_at")
+
+  @@map("identity_verifications")
+}
+
+model NextOfKin {
+  id           String   @id @default(cuid())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String   @unique @map("user_id")
+  name         String
+  email        String
+  phoneNumber  String   @map("phone_number")
+  relationship String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("next_of_kins")
+}
+
+model Loan {
+  id                         String          @id @default(cuid())
+  user                       User            @relation(fields: [userId], references: [id])
+  userId                     String          @unique @map("user_id")
+  type                       LoanType
+  amount                     Float
+  interestRate               Float           @map("interest_rate")
+  status                     LoanStatus
+  approvalDate               DateTime        @map("approval_date")
+  repaymentSchedule          String          @map("repayment_schedule")
+  remainingBalance           Float           @map("remaining_balance")
+  employerVerificationStatus Boolean         @default(false) @map("employer_verification_status")
+  deviceVerificationStatus   Boolean         @default(false) @map("device_verification_status")
+  streetCredibilityScore     Float           @default(0) @map("street_credibility_score")
+  createdAt                  DateTime        @default(now()) @map("created_at")
+  updatedAt                  DateTime        @updatedAt @map("updated_at")
+  agents                     Agent[]
+  loanRepayments             LoanRepayment[]
+
+  @@map("loans")
+}
+
+model Agent {
+  id                     String   @id @default(cuid())
+  name                   String
+  phoneNumber            String   @unique @map("phone_number")
+  email                  String   @unique
+  streetCredibilityScore Float    @default(0) @map("street_credibility_score")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  loanId                 String   @unique @map("load_id")
+  loan                   Loan     @relation(fields: [loanId], references: [id])
+
+  @@map("agents")
+}
+
+model LoanRepayment {
+  id            String              @id @default(cuid())
+  loan          Loan                @relation(fields: [loanId], references: [id])
+  loanId        String              @unique @map("loan_id")
+  amountPaid    Float               @map("amount_paid")
+  repaymentDate DateTime            @map("repayment_date")
+  status        LoanRepaymentStatus
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  @@map("loan_repayments")
+}
